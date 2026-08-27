@@ -1,36 +1,44 @@
 #!/bin/sh
 set -eu
 
-ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-BACKEND="$ROOT/backend"
-BOT="$ROOT/bot"
+ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+BACKEND_DIR="$ROOT_DIR/backend"
 
 echo "=== VLDST START ==="
-echo "ROOT=$ROOT"
-echo "BACKEND=$BACKEND"
-echo "BOT=$BOT"
+echo "ROOT=$ROOT_DIR"
+echo "BACKEND=$BACKEND_DIR"
 
-echo "=== CHECK FILES ==="
-test -f "$BACKEND/alembic.ini"
-test -d "$BACKEND/migrations"
-test -f "$BACKEND/migrations/env.py"
-test -f "$BACKEND/app/db.py"
-test -f "$ROOT/app.py" || true
+[ -d "$BACKEND_DIR" ] || {
+    echo "ERROR: backend directory not found"
+    exit 1
+}
+
+[ -d "$BACKEND_DIR/migrations" ] || {
+    echo "ERROR: migrations directory not found"
+    exit 1
+}
+
+[ -f "$BACKEND_DIR/alembic.ini" ] || {
+    echo "ERROR: alembic.ini not found"
+    exit 1
+}
+
+cd "$BACKEND_DIR"
+
+echo "=== BACKEND ==="
+echo "PWD=$(pwd)"
+
+echo "=== MIGRATION FILES ==="
+find migrations -maxdepth 2 -type f -print
 
 echo "=== MIGRATIONS ==="
-cd "$BACKEND"
-PYTHONPATH="$BACKEND" alembic -c "$BACKEND/alembic.ini" upgrade head
+PYTHONPATH="$BACKEND_DIR" alembic \
+    -c "$BACKEND_DIR/alembic.ini" \
+    upgrade head
 
-echo "=== SEED ==="
-PYTHONPATH="$BACKEND" python -m app.seed
+echo "=== API START ==="
 
-echo "=== BOT ==="
-cd "$ROOT"
-PYTHONPATH="$BACKEND:$BOT" python "$BOT/bot.py" &
-BOT_PID=$!
-
-echo "=== FASTAPI ==="
-cd "$BACKEND"
-PYTHONPATH="$BACKEND" exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
-
-kill "$BOT_PID" 2>/dev/null || true
+exec PYTHONPATH="$BACKEND_DIR" uvicorn \
+    app.main:app \
+    --host 0.0.0.0 \
+    --port "${PORT}"
