@@ -2,18 +2,19 @@
 set -e
 
 echo "=== VLDST START ==="
-
+echo "PWD=$(pwd)"
 echo "=== MIGRATIONS ==="
-cd /app/backend
-PYTHONPATH=/app/backend alembic -c /app/backend/alembic.ini upgrade head
+
+PYTHONPATH=./backend alembic -c ./backend/alembic.ini upgrade head
 
 echo "=== SEED ==="
-PYTHONPATH=/app/backend python -m app.seed || true
+PYTHONPATH=./backend python -m app.seed || true
 
 echo "=== BOT ==="
-cd /app
-PYTHONPATH=/app/backend:/app/bot python /app/bot/bot.py &
+PYTHONPATH=./backend:./bot python ./bot/bot.py &
 BOT_PID=$!
 
 echo "=== FASTAPI ==="
-PYTHONPATH=/app/backend exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+PYTHONPATH=./backend exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+
+kill "$BOT_PID" 2>/dev/null || true
