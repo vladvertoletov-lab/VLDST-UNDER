@@ -1,29 +1,40 @@
-from logging.config import fileConfig
+import asyncio
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.db import Base
 from app.config import settings
+from app.db import Base
 
 
 config = context.config
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
 target_metadata = Base.metadata
 
 
-def run_migrations_offline() -> None:
+def get_database_url() -> str:
     url = settings.database_url_async
+
+    if url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://"):]
+
+    elif url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+
+    return url
+
+
+def run_migrations_offline() -> None:
+    url = get_database_url()
 
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -34,6 +45,8 @@ def do_run_migrations(connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -42,7 +55,8 @@ def do_run_migrations(connection) -> None:
 
 async def run_migrations_online() -> None:
     configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.database_url_async
+
+    configuration["sqlalchemy.url"] = get_database_url()
 
     connectable = async_engine_from_config(
         configuration,
@@ -50,15 +64,14 @@ async def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+    finally:
+        await connectable.dispose()
 
 
 def main() -> None:
-    import asyncio
-
     if context.is_offline_mode():
         run_migrations_offline()
     else:
