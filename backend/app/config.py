@@ -2,27 +2,35 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    bot_token: str = ""
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vldst"
+    public_url: str = "http://localhost:8000"
+    webapp_url: str = "http://localhost:8000/"
+    admin_url: str = "http://localhost:8000/admin/"
+    bot_username: str = "vldst_bot"
+    admin_ids: str = ""
+    secret_key: str = "dev-only-change-me"
+    stars_provider_token: str = ""
+    log_level: str = "INFO"
+    cors_origins: str = "http://localhost:8000"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
-    bot_token: str = ""
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vldst"
+    @property
+    def database_url_async(self) -> str:
+        url = self.database_url
 
-    public_url: str = "http://localhost:8000"
-    webapp_url: str = "http://localhost:8000/"
-    admin_url: str = "http://localhost:8000/admin/"
+        if url.startswith("postgres://"):
+            return "postgresql+asyncpg://" + url[len("postgres://"):]
 
-    bot_username: str = "vldst_bot"
-    admin_ids: str = ""
+        if url.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + url[len("postgresql://"):]
 
-    secret_key: str = "dev-only-change-me"
-    stars_provider_token: str = ""
-
-    log_level: str = "INFO"
-    cors_origins: str = "http://localhost:8000"
+        return url
 
     @property
     def admin_id_set(self):
