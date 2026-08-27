@@ -19,16 +19,16 @@ services:
         sync: false
 
       - key: PUBLIC_URL
-        sync: false
+        value: https://vldst-underground.onrender.com
 
       - key: WEBAPP_URL
-        sync: false
+        value: https://vldst-underground.onrender.com/
 
       - key: ADMIN_URL
-        sync: false
+        value: https://vldst-underground.onrender.com/admin/
 
       - key: BOT_USERNAME
-        sync: false
+        value: VLDST_miniapp_bot
 
       - key: ADMIN_IDS
         sync: false
@@ -46,11 +46,17 @@ services:
           name: vldst-db
           property: connectionString
 
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: vldst-underground
+          envVarKey: SECRET_KEY
+
       - key: BOT_TOKEN
         sync: false
 
       - key: WEBAPP_URL
-        sync: false
+        value: https://vldst-underground.onrender.com/
 
 databases:
   - name: vldst-db
