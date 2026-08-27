@@ -31,14 +31,25 @@ echo "PWD=$(pwd)"
 echo "=== MIGRATION FILES ==="
 find migrations -maxdepth 2 -type f -print
 
-echo "=== MIGRATIONS ==="
+echo "=== ALEMBIC CURRENT ==="
+PYTHONPATH="$BACKEND_DIR" alembic \
+    -c "$BACKEND_DIR/alembic.ini" \
+    current || true
+
+echo "=== ALEMBIC HISTORY ==="
+PYTHONPATH="$BACKEND_DIR" alembic \
+    -c "$BACKEND_DIR/alembic.ini" \
+    history
+
+echo "=== ALEMBIC UPGRADE HEAD ==="
 PYTHONPATH="$BACKEND_DIR" alembic \
     -c "$BACKEND_DIR/alembic.ini" \
     upgrade head
 
-echo "=== API START ==="
+echo "=== MIGRATIONS DONE ==="
 
-exec PYTHONPATH="$BACKEND_DIR" uvicorn \
+echo "=== API START ==="
+exec env PYTHONPATH="$BACKEND_DIR" uvicorn \
     app.main:app \
     --host 0.0.0.0 \
     --port "${PORT}"
