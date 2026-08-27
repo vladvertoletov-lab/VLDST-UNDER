@@ -11,7 +11,16 @@ echo "Starting Telegram bot..."
 python /app/bot/bot.py &
 BOT_PID=$!
 
-echo "Starting FastAPI..."
-PYTHONPATH=/app/backend exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+cleanup() {
+    echo "Stopping Telegram bot..."
+    kill "$BOT_PID" 2>/dev/null || true
+    wait "$BOT_PID" 2>/dev/null || true
+}
 
-kill "$BOT_PID" 2>/dev/null || true
+trap cleanup INT TERM EXIT
+
+echo "Starting FastAPI..."
+PYTHONPATH=/app/backend uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+WEB_PID=$!
+
+wait "$WEB_PID"
