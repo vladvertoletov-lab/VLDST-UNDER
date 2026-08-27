@@ -18,11 +18,17 @@ async function req(path,opt={}){
   return d;
 }
 async function auth(){
-  if(token)return true;
   const init=tg?.initData;
   if(!init){renderError('Открой VLDST UNDERGROUND внутри Telegram.');return false}
-  try{const d=await req('/auth/telegram',{method:'POST',body:JSON.stringify({init_data:init})});token=d.token;localStorage.setItem('vldst_token',token);return true}
-  catch(e){renderError(e.message);return false}
+  try{
+    // Re-authenticate from Telegram initData on every app launch. This also
+    // transparently repairs expired/revoked local JWTs instead of trapping the
+    // player behind a stale localStorage token.
+    const r=await fetch(api+'/auth/telegram',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:init})});
+    let d={}; try{d=await r.json()}catch{}
+    if(!r.ok)throw Error(d.detail||'Authentication failed');
+    token=d.token;localStorage.setItem('vldst_token',token);return true
+  }catch(e){localStorage.removeItem('vldst_token');token='';renderError(e.message);return false}
 }
 function loading(){app.innerHTML=`<div class="loading"><div class="skel tall"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>`}
 function renderError(msg){app.innerHTML=`<div class="error-box"><b>Connection error</b><p class="muted">${esc(msg)}</p><button class="btn" onclick="location.reload()">RETRY</button></div>`}

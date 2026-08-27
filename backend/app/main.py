@@ -151,7 +151,7 @@ async def me(uid:int=Depends(current_user),db:AsyncSession=Depends(get_db)):
     u=await db.get(User,uid); b=await get_balance(db,uid)
     if not u: raise HTTPException(404,"User not found")
     await refresh_energy(db,u); await db.commit()
-    return {"id":u.id,"telegram_id":u.telegram_id,"username":u.username,"nickname":u.nickname,"level":u.level,"xp":u.xp,"energy":u.energy,"streak":u.streak,"vld":b.vld,"scrap":b.scrap,"core":b.core,"referral_code":u.referral_code}
+    return {"id":u.id,"telegram_id":u.telegram_id,"username":u.username,"nickname":u.nickname,"level":u.level,"xp":u.xp,"energy":u.energy,"streak":u.streak,"vld":b.vld,"scrap":b.scrap,"core":b.core,"referral_code":u.referral_code,"title":u.selected_title}
 
 @app.get("/api/profile")
 async def profile(uid:int=Depends(current_user),db:AsyncSession=Depends(get_db)):
@@ -500,7 +500,7 @@ async def trade_confirm(trade_id:int,request:Request,uid:int=Depends(current_use
 @app.get("/api/referrals")
 async def referrals(uid:int=Depends(current_user),db:AsyncSession=Depends(get_db)):
     u=await db.get(User,uid); count=(await db.execute(select(func.count(Referral.id)).where(Referral.inviter_id==uid))).scalar() or 0
-    return {"code":u.referral_code,"count":count,"link":f"https://t.me/{settings.bot_username}?startapp={u.referral_code}"}
+    return {"code":u.referral_code,"count":count,"link":f"https://t.me/{settings.bot_username}?start={u.referral_code}"}
 
 @app.get("/api/shop")
 async def shop(db:AsyncSession=Depends(get_db)):

@@ -10,14 +10,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -U postgres -d vldst"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vldst"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  backend:
+  app:
     build: .
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: python /app/start.py
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/vldst
       BOT_TOKEN: ${BOT_TOKEN:-}
@@ -28,25 +28,11 @@ services:
       ADMIN_IDS: ${ADMIN_IDS:-}
       SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
       STARS_PROVIDER_TOKEN: ${STARS_PROVIDER_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy
-
-  bot:
-    build: .
-    command: python /app/bot/bot.py
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/vldst
-      BOT_TOKEN: ${BOT_TOKEN:-}
-      WEBAPP_URL: ${WEBAPP_URL:-http://localhost:8000/}
-      BOT_USERNAME: ${BOT_USERNAME:-vldst_bot}
-      ADMIN_IDS: ${ADMIN_IDS:-}
-      SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
-    depends_on:
-      backend:
-        condition: service_started
       db:
         condition: service_healthy
 

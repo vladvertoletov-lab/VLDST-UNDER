@@ -1,8 +1,11 @@
 services:
   - type: web
     name: vldst-underground
-    runtime: docker
+    runtime: python
     plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start.py
+    healthCheckPath: /api/health
     autoDeployTrigger: checksPass
     envVars:
       - key: DATABASE_URL
@@ -25,6 +28,8 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: https://vldst-underground.onrender.com
+      - key: LOG_LEVEL
+        value: INFO
 
 databases:
   - name: vldst-db
