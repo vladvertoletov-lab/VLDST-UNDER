@@ -3,25 +3,53 @@ services:
     name: vldst-underground
     runtime: docker
     plan: free
+    dockerfilePath: ./Dockerfile
     autoDeployTrigger: checksPass
+
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: vldst-db
           property: connectionString
-      - key: BOT_TOKEN
-        sync: false
+
       - key: SECRET_KEY
         generateValue: true
+
+      - key: BOT_TOKEN
+        sync: false
+
       - key: PUBLIC_URL
         sync: false
+
       - key: WEBAPP_URL
         sync: false
+
       - key: ADMIN_URL
         sync: false
+
       - key: BOT_USERNAME
         sync: false
+
       - key: ADMIN_IDS
+        sync: false
+
+  - type: worker
+    name: vldst-underground-bot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.bot
+    autoDeployTrigger: checksPass
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vldst-db
+          property: connectionString
+
+      - key: BOT_TOKEN
+        sync: false
+
+      - key: WEBAPP_URL
         sync: false
 
 databases:
