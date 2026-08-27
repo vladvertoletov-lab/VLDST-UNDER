@@ -1,40 +1,30 @@
 services:
   - type: web
     name: vldst-underground
-    runtime: python
+    runtime: docker
     plan: free
-
-    buildCommand: pip install -r requirements.txt
-    startCommand: ./render_start.sh
-
     autoDeployTrigger: checksPass
-
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: vldst-db
           property: connectionString
-
-      - key: SECRET_KEY
-        generateValue: true
-
       - key: BOT_TOKEN
         sync: false
-
+      - key: SECRET_KEY
+        generateValue: true
       - key: PUBLIC_URL
         value: https://vldst-underground.onrender.com
-
       - key: WEBAPP_URL
         value: https://vldst-underground.onrender.com/
-
       - key: ADMIN_URL
         value: https://vldst-underground.onrender.com/admin/
-
       - key: BOT_USERNAME
         value: VLDST_miniapp_bot
-
       - key: ADMIN_IDS
         sync: false
+      - key: CORS_ORIGINS
+        value: https://vldst-underground.onrender.com
 
 databases:
   - name: vldst-db

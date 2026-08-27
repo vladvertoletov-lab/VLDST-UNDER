@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     bot_token: str = ""
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vldst"
     public_url: str = "http://localhost:8000"
@@ -14,31 +14,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:8000"
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    @property
-    def database_url_async(self) -> str:
-        url = self.database_url
-
-        if url.startswith("postgres://"):
-            return "postgresql+asyncpg://" + url[len("postgres://"):]
-
-        if url.startswith("postgresql://"):
-            return "postgresql+asyncpg://" + url[len("postgresql://"):]
-
-        return url
-
     @property
     def admin_id_set(self):
-        return {
-            int(x.strip())
-            for x in self.admin_ids.split(",")
-            if x.strip().isdigit()
-        }
-
+        return {int(x.strip()) for x in self.admin_ids.split(",") if x.strip().isdigit()}
 
 settings = Settings()
