@@ -11,7 +11,7 @@ def verify_telegram_init_data(init_data: str, max_age=86400):
     if not auth_date or time.time() - auth_date > max_age:
         raise ValueError("Expired Telegram initData")
     data_check = "\n".join(f"{k}={v}" for k,v in sorted(pairs.items()))
-    secret = hmac.new(b"WebAppData", settings.bot_token.encode(), hashlib.sha256).digest()
+    secret = hmac.new(settings.bot_token.encode(), b"WebAppData", hashlib.sha256).digest()
     expected = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, received):
         raise ValueError("Invalid Telegram signature")
