@@ -1,0 +1,181 @@
+name: VLDST Production Release Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vldst-production-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  E2E_DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/vldst_e2e
+  DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/vldst_e2e
+  SECRET_KEY: ci-only-not-for-production
+  BOT_TOKEN: ci-placeholder
+
+jobs:
+  release-gate:
+    name: Production Release Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vldst_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d vldst_e2e"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Verify PostgreSQL
+        run: |
+          python - <<'PY'
+          import asyncio, asyncpg
+          async def main():
+              for _ in range(30):
+                  try:
+                      conn = await asyncpg.connect('postgresql://postgres:postgres@127.0.0.1:5432/vldst_e2e')
+                      await conn.close()
+                      return
+                  except Exception:
+                      await asyncio.sleep(1)
+              raise SystemExit('PostgreSQL did not become ready')
+          asyncio.run(main())
+          PY
+
+      - name: Static and import checks
+        run: |
+          python -m compileall -q backend bot tests
+          python scripts/qa_preflight.py
+
+      - name: Unit tests
+        run: pytest -q tests/test_rarity.py tests/test_economy.py tests/test_security.py
+
+      - name: Alembic migration gate
+        run: |
+          PYTHONPATH=backend python -m alembic -c backend/alembic.ini upgrade head
+          PYTHONPATH=backend python -m alembic -c backend/alembic.ini current
+
+      - name: Seed gate
+        run: PYTHONPATH=backend python -m app.seed
+
+      - name: Seed smoke check
+        run: |
+          PYTHONPATH=backend python - <<'PY'
+          import asyncio
+          from sqlalchemy import select, func
+          from app.db import SessionLocal
+          from app.models import Case, Item, Collection, Achievement, StarsProduct, Season, Event
+          async def main():
+              async with SessionLocal() as db:
+                  checks = {
+                      'cases': (Case, 20),
+                      'items': (Item, 160),
+                      'collections': (Collection, 20),
+                      'achievements': (Achievement, 100),
+                      'stars_products': (StarsProduct, 30),
+                      'seasons': (Season, 1),
+                      'events': (Event, 1),
+                  }
+                  for name, (model, minimum) in checks.items():
+                      count = (await db.execute(select(func.count(model.id)))).scalar_one()
+                      assert count >= minimum, f'{name}: expected >= {minimum}, got {count}'
+          asyncio.run(main())
+          PY
+
+      - name: PostgreSQL API E2E
+        run: pytest -q tests/test_api_e2e.py
+
+      - name: PostgreSQL E2E
+        run: pytest -q tests/test_e2e_postgres.py
+
+      - name: Concurrency gate
+        run: pytest -q tests/test_concurrency_postgres.py
+
+      - name: Assert concurrency suite has no skips
+        run: |
+          set -euo pipefail
+          pytest -q tests/test_concurrency_postgres.py --junitxml=artifacts-concurrency.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse('artifacts-concurrency.xml').getroot()
+          skipped = int(root.attrib.get('skipped', '0'))
+          failures = int(root.attrib.get('failures', '0'))
+          errors = int(root.attrib.get('errors', '0'))
+          assert skipped == 0, f'Concurrency suite skipped {skipped} tests'
+          assert failures == 0 and errors == 0, f'Concurrency failures={failures}, errors={errors}'
+          PY
+
+      - name: 1000-user stress test
+        run: |
+          mkdir -p artifacts
+          python scripts/stress_load.py \
+            --concurrency 1000 \
+            --workload all \
+            --report-out artifacts/load-1000.md \
+            --json-out artifacts/load-1000.json
+
+      - name: Performance threshold gate
+        run: |
+          python scripts/validate_stress_thresholds.py artifacts/load-1000.json \
+            --p95-ms 5000 \
+            --p99-ms 10000 \
+            --min-throughput 2 \
+            --max-lock-waiters 250 \
+            --max-errors 0 \
+            --max-deadlocks 0 \
+            --required-concurrency 1000 \
+            --required-workloads case_open,guild_join,market_purchase_distributed,market_purchase_hot_listing,duplicate_payment_callback
+
+      - name: Upload release QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vldst-release-gate-${{ github.sha }}
+          path: |
+            artifacts/
+            artifacts-concurrency.xml
+          if-no-files-found: warn
+
+      - name: Release gate summary
+        run: |
+          {
+            echo "## VLDST Production Release Gate"
+            echo ""
+            echo "- PostgreSQL 16: PASS"
+            echo "- Alembic migrations: PASS"
+            echo "- Seed: PASS"
+            echo "- API E2E: PASS"
+            echo "- PostgreSQL E2E: PASS"
+            echo "- Concurrency: PASS"
+            echo "- 1000-user stress: PASS"
+            echo "- Performance thresholds: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
