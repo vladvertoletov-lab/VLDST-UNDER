@@ -1,0 +1,65 @@
+name: VLDST PostgreSQL Stress Gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  E2E_DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/vldst_e2e
+  DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/vldst_e2e
+  SECRET_KEY: stress-only-not-for-production
+  BOT_TOKEN: ci-placeholder
+
+jobs:
+  stress:
+    name: PostgreSQL stress ${{ matrix.concurrency }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        concurrency: [100, 250, 500, 1000]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vldst_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d vldst_e2e"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r backend/requirements.txt
+      - name: Migrate
+        run: PYTHONPATH=backend python -m alembic -c backend/alembic.ini upgrade head
+      - name: Stress benchmark
+        run: |
+          mkdir -p artifacts
+          python scripts/stress_load.py \
+            --concurrency ${{ matrix.concurrency }} \
+            --report-out artifacts/load-${{ matrix.concurrency }}.md \
+            --json-out artifacts/load-${{ matrix.concurrency }}.json
+      - name: Performance threshold gate
+        run: python scripts/validate_stress_thresholds.py artifacts/load-${{ matrix.concurrency }}.json --p95-ms 5000 --p99-ms 10000 --min-throughput 2 --max-lock-waiters 250 --max-errors 0 --max-deadlocks 0
+      - name: Upload stress report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vldst-load-${{ matrix.concurrency }}
+          path: artifacts/

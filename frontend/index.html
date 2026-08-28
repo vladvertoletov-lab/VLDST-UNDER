@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07070d">
+<title>VLDST UNDERGROUND</title>
+<link rel="icon" href="/assets/ui/logo-mark.svg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="noise"></div><div class="orb orb-a"></div><div class="orb orb-b"></div>
+<div id="app-shell">
+  <header class="topbar">
+    <button class="brand" onclick="tab('home')" aria-label="Home"><span class="brand-mark">V</span><span><strong>VLDST</strong><small>UNDERGROUND</small></span></button>
+    <button class="balance-pill" onclick="tab('profile')"><span class="coin">V</span><span id="balance">—</span><small>VLD</small></button>
+  </header>
+  <div id="app" class="screen"></div>
+</div>
+<nav id="nav" class="bottom-nav">
+  <button data-tab="home"><i>⌂</i><span>HOME</span></button>
+  <button data-tab="cases"><i>◈</i><span>CASES</span></button>
+  <button data-tab="games"><i>⌁</i><span>GAMES</span></button>
+  <button data-tab="quests"><i>✓</i><span>QUESTS</span></button>
+  <button data-tab="profile"><i>◉</i><span>PROFILE</span></button>
+</nav>
+<div id="modal-root"></div>
+<div id="toast-root" aria-live="polite"></div>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
