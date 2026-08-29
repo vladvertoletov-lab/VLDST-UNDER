@@ -35,6 +35,7 @@ class Item(Base):
     rarity=Column(String)
     collection=Column(String, default="")
     value=Column(BigInteger, default=0)
+    base_value=Column(BigInteger, default=0)
     image=Column(String, default="")
 class Inventory(Base):
     __tablename__="inventory"
@@ -132,7 +133,26 @@ async def init_db():
             ALTER TABLE items
             ADD COLUMN IF NOT EXISTS value BIGINT DEFAULT 0;
         """)
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ADD COLUMN IF NOT EXISTS base_value BIGINT DEFAULT 0;
+        """)
 
+        await conn.exec_driver_sql("""
+            UPDATE items
+            SET base_value = COALESCE(value, 0)
+            WHERE base_value IS NULL;
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN base_value SET DEFAULT 0;
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN base_value SET NOT NULL;
+        """)
         await conn.exec_driver_sql("""
             ALTER TABLE items
             ADD COLUMN IF NOT EXISTS collection VARCHAR DEFAULT '';
