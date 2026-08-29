@@ -23,9 +23,16 @@ async def startup():
             rar=list(RARITIES)
             for i in range(1,161):
                 r="COMMON" if i<=50 else "RARE" if i<=90 else "EPIC" if i<=120 else "LEGENDARY" if i<=145 else "MYTHIC" if i<=157 else "SECRET"
-                db.add(Item(id=i,name=f"VLDST {r} #{i}",rarity=r,collection="UNDERGROUND",value=i*250,image=f"/assets/items/item_{i}.svg"))
-        if not (await db.execute(select(func.count(Quest.id)))).scalar():
-            qs=[
+db.add(Item(
+    id=i,
+    name=f"VLDST {r} #{i}",
+    description="",
+    rarity=r,
+    collection="UNDERGROUND",
+    value=i * 250,
+    base_value=i * 250,
+    image=f"/assets/items/item_{i}.svg"
+))
             ("First Signal","Открой 1 кейс","cases",1,500,20),("Network Explorer","Открой 3 кейса","cases",3,1200,35),
             ("Case Hunter","Открой 5 кейсов","cases",5,2500,60),("Game Starter","Сыграй 3 игры","games",3,800,30),
             ("Game Addict","Сыграй 10 игр","games",10,2500,80),("Recycler","Продай 3 предмета","sell",3,1000,35),
