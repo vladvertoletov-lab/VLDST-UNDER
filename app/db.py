@@ -72,6 +72,21 @@ class Gift(Base):
     id=Column(Integer,primary_key=True); sender=Column(BigInteger); receiver=Column(BigInteger)
     inventory_id=Column(Integer); created_at=Column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc))
 async def init_db():
-    async with engine.begin() as c: await c.run_sync(Base.metadata.create_all)
+    async with engine.begin() as c:
+        await c.run_sync(Base.metadata.create_all)
+
+        # Автоматическая миграция старых таблиц
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ADD COLUMN IF NOT EXISTS stars_price INTEGER DEFAULT 0
+        """)
+
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ALTER COLUMN stars_price SET DEFAULT 0
+        """)
+
+
 async def get_db():
-    async with Session() as s: yield s
+    async with Session() as s:
+        yield s
