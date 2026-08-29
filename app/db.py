@@ -75,26 +75,43 @@ async def init_db():
     async with engine.begin() as c:
         await c.run_sync(Base.metadata.create_all)
 
-        # Migration for existing Render PostgreSQL database.
-        # Old versions of the project may contain columns that
-        # are not used by the current SQLAlchemy models.
+        # Compatibility migration for existing PostgreSQL database.
+        # These columns existed in older versions of VLDST UNDERGROUND.
 
+        # cases.stars_price
         await c.exec_driver_sql("""
             ALTER TABLE cases
             ADD COLUMN IF NOT EXISTS stars_price INTEGER DEFAULT 0
         """)
 
+        # Old cases.description column
         await c.exec_driver_sql("""
             ALTER TABLE cases
-            ADD COLUMN IF NOT EXISTS description TEXT
+            ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''
         """)
 
-        # Existing rows may have NULL description.
-        # Give them a safe default before applying NOT NULL.
         await c.exec_driver_sql("""
             UPDATE cases
             SET description = ''
             WHERE description IS NULL
+        """)
+
+        # Old cases.weights column
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ADD COLUMN IF NOT EXISTS weights JSONB DEFAULT '{}'::jsonb
+        """)
+
+        await c.exec_driver_sql("""
+            UPDATE cases
+            SET weights = '{}'::jsonb
+            WHERE weights IS NULL
+        """)
+
+        # Make old required columns safe for current seed data.
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ALTER COLUMN stars_price SET DEFAULT 0
         """)
 
         await c.exec_driver_sql("""
@@ -104,19 +121,8 @@ async def init_db():
 
         await c.exec_driver_sql("""
             ALTER TABLE cases
-            ALTER COLUMN description SET NOT NULL
+            ALTER COLUMN weights SET DEFAULT '{}'::jsonb
         """)
-
-        await c.exec_driver_sql("""
-            ALTER TABLE cases
-            ALTER COLUMN stars_price SET DEFAULT 0
-        """)
-
-
-async def get_db():
-    async with Session() as s:
-        yield s
-
 
 
 async def get_db():
