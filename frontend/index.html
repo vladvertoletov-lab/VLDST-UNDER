@@ -1,0 +1,10 @@
+<!doctype html><html lang=ru><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>VLDST UNDERGROUND</title><script src="https://telegram.org/js/telegram-web-app.js"></script><link rel=stylesheet href=style.css></head><body><div id=app>
+<header><b>VLDST<br><small>UNDERGROUND</small></b><span id=bal>🪙 5 000</span></header>
+<section class=hero><small>SEASON 01 • NETWORK ONLINE</small><h1>ENTER THE<br><em>UNDERGROUND</em></h1><p>Кейсы — только начало.</p><button onclick="section('cases')">ВОЙТИ В СЕТЬ</button></section>
+<nav><button onclick="section('cases')">▣<small>CASES</small></button><button onclick="section('games')">◉<small>GAMES</small></button><button onclick="section('quests')">✓<small>QUESTS</small></button><button onclick="section('profile')">◎<small>PROFILE</small></button></nav>
+<main>
+<section id=cases><h2>CASE NETWORK</h2><div id=caseGrid class=grid></div></section>
+<section id=games><h2>GAME HUB</h2><div id=gameGrid class=grid></div></section>
+<section id=quests><h2>QUEST BOARD</h2><div id=questGrid></div></section>
+<section id=profile><h2>PROFILE</h2><div id=profileCard class=panel>Loading...</div><div class=grid><button class=panel onclick=inventory()>🎒<b>INVENTORY</b><small>Предметы</small></button><button class=panel onclick=leaderboard()>🏆<b>LEADERBOARD</b><small>Топ игроков</small></button><button class=panel onclick=referrals()>🤝<b>REFERRALS</b><small>Приглашай</small></button><button class=panel onclick=guilds()>⚔️<b>GUILDS</b><small>Команды</small></button><button class=panel onclick=stars()>⭐<b>STAR SHOP</b><small>Premium</small></button><button class=panel onclick=daily()>🎁<b>DAILY</b><small>Награда</small></button></div></section>
+</main><div id=modal class=modal onclick="if(event.target===this)closeM()"><div id=modalBody class=modalbox></div></div></div><script src=app.js></script></body></html>
