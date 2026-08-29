@@ -29,8 +29,13 @@ class Case(Base):
     image=Column(String); active=Column(Boolean,default=True)
 class Item(Base):
     __tablename__="items"
-    id=Column(Integer,primary_key=True); name=Column(String); rarity=Column(String)
-    collection=Column(String); value=Column(BigInteger); image=Column(String)
+    id=Column(Integer,primary_key=True)
+    name=Column(String)
+    description=Column(String, nullable=False, default="")
+    rarity=Column(String)
+    collection=Column(String, default="")
+    value=Column(BigInteger, default=0)
+    image=Column(String, default="")
 class Inventory(Base):
     __tablename__="inventory"
     id=Column(Integer,primary_key=True); telegram_id=Column(BigInteger,index=True)
@@ -73,7 +78,12 @@ class Gift(Base):
     inventory_id=Column(Integer); created_at=Column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc))
 async def init_db():
     async with engine.begin() as conn:
+        # Создаём отсутствующие таблицы
         await conn.run_sync(Base.metadata.create_all)
+
+        # =========================
+        # CASES MIGRATION
+        # =========================
 
         await conn.exec_driver_sql("""
             ALTER TABLE cases
@@ -88,6 +98,34 @@ async def init_db():
         await conn.exec_driver_sql("""
             ALTER TABLE cases
             ADD COLUMN IF NOT EXISTS weights JSONB DEFAULT '{}'::jsonb;
+        """)
+
+        # Исправляем старые NULL
+        await conn.exec_driver_sql("""
+            UPDATE cases
+            SET description = ''
+            WHERE description IS NULL;
+        """)
+
+        await conn.exec_driver_sql("""
+            UPDATE cases
+            SET stars_price = 0
+            WHERE stars_price IS NULL;
+        """)
+
+        await conn.exec_driver_sql("""
+            UPDATE cases
+            SET weights = '{}'::jsonb
+            WHERE weights IS NULL;
+        """)
+
+        # =========================
+        # ITEMS MIGRATION
+        # =========================
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
         """)
 
         await conn.exec_driver_sql("""
@@ -105,22 +143,11 @@ async def init_db():
             ADD COLUMN IF NOT EXISTS image VARCHAR DEFAULT '';
         """)
 
+        # Исправляем старые NULL
         await conn.exec_driver_sql("""
-            UPDATE cases
+            UPDATE items
             SET description = ''
             WHERE description IS NULL;
-        """)
-
-        await conn.exec_driver_sql("""
-            UPDATE cases
-            SET stars_price = 0
-            WHERE stars_price IS NULL;
-        """)
-
-        await conn.exec_driver_sql("""
-            UPDATE cases
-            SET weights = '{}'::jsonb
-            WHERE weights IS NULL;
         """)
 
         await conn.exec_driver_sql("""
@@ -141,6 +168,33 @@ async def init_db():
             WHERE image IS NULL;
         """)
 
+        # Устанавливаем безопасные DEFAULT
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN description SET DEFAULT '';
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN value SET DEFAULT 0;
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN collection SET DEFAULT '';
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN image SET DEFAULT '';
+        """)
+
+        # description в старой БД обязательный,
+        # поэтому гарантируем отсутствие NULL
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ALTER COLUMN description SET NOT NULL;
+        """)
 
 async def get_db():
     async with Session() as s:
