@@ -22,30 +22,59 @@ async def startup():
         if not (await db.execute(select(func.count(Item.id)))).scalar():
             rar=list(RARITIES)
             for i in range(1,161):
-                r="COMMON" if i<=50 else "RARE" if i<=90 else "EPIC" if i<=120 else "LEGENDARY" if i<=145 else "MYTHIC" if i<=157 else "SECRET"
-db.add(Item(
-    id=i,
-    name=f"VLDST {r} #{i}",
-    description="",
-    rarity=r,
-    collection="UNDERGROUND",
-    value=i * 250,
-    base_value=i * 250,
-    image=f"/assets/items/item_{i}.svg"
-))
-            ("First Signal","Открой 1 кейс","cases",1,500,20),("Network Explorer","Открой 3 кейса","cases",3,1200,35),
-            ("Case Hunter","Открой 5 кейсов","cases",5,2500,60),("Game Starter","Сыграй 3 игры","games",3,800,30),
-            ("Game Addict","Сыграй 10 игр","games",10,2500,80),("Recycler","Продай 3 предмета","sell",3,1000,35),
-            ("Upgrade","Улучши предмет","upgrade",1,1500,50),("Collector","Собери 10 предметов","items",10,2000,60),
-            ("Rare Signal","Получи RARE+","rare",1,1200,40),("Epic Signal","Получи EPIC+","epic",1,3000,90),
-            ("Recruit","Пригласи игрока","referral",1,1500,70),("Streak 3","Заходи 3 дня","streak",3,1800,80),
-            ("Rich","Заработай 5000 VLD","earn",5000,1000,50),("Whale","Заработай 25000 VLD","earn",25000,5000,120),
-            ("Neon","Открой NEON+","neon",1,3500,100),("Secret Hunter","Найди SECRET","secret",1,25000,300),
-            ("Quest Master","Выполни 5 квестов","quest",5,4000,120),("Week","Зайди 7 дней","streak",7,7000,200),
-            ("Level 5","Достигни 5 уровня","level",5,5000,180),("Level 10","Достигни 10 уровня","level",10,15000,350)]
-            for i,q in enumerate(qs,1): db.add(Quest(id=i,title=q[0],description=q[1],kind=q[2],target=q[3],reward=q[4],xp=q[5]))
-        await db.commit()
+                r = (
+                    "COMMON" if i <= 50 else
+                    "RARE" if i <= 90 else
+                    "EPIC" if i <= 120 else
+                    "LEGENDARY" if i <= 145 else
+                    "MYTHIC" if i <= 157 else
+                    "SECRET"
+                )
 
+                db.add(Item(
+                    id=i,
+                    name=f"VLDST {r} #{i}",
+                    description="",
+                    rarity=r,
+                    collection="UNDERGROUND",
+                    value=i * 250,
+                    base_value=i * 250,
+                    image=f"/assets/items/item_{i}.svg"
+                ))
+
+            qs = [
+                ("First Signal","Открой 1 кейс","cases",1,500,20),
+                ("Network Explorer","Открой 3 кейса","cases",3,1200,35),
+                ("Case Hunter","Открой 5 кейсов","cases",5,2500,60),
+                ("Game Starter","Сыграй 3 игры","games",3,800,30),
+                ("Game Addict","Сыграй 10 игр","games",10,2500,80),
+                ("Recycler","Продай 3 предмета","sell",3,1000,35),
+                ("Upgrade","Улучши предмет","upgrade",1,1500,50),
+                ("Collector","Собери 10 предметов","items",10,2000,60),
+                ("Rare Signal","Получи RARE+","rare",1,1200,40),
+                ("Epic Signal","Получи EPIC+","epic",1,3000,90),
+                ("Recruit","Пригласи игрока","referral",1,1500,70),
+                ("Streak 3","Заходи 3 дня","streak",3,1800,80),
+                ("Rich","Заработай 5000 VLD","earn",5000,1000,50),
+                ("Whale","Заработай 25000 VLD","earn",25000,5000,120),
+                ("Neon","Открой NEON+","neon",1,3500,100),
+                ("Secret Hunter","Найди SECRET","secret",1,25000,300),
+                ("Quest Master","Выполни 5 квестов","quest",5,4000,120),
+                ("Week","Зайди 7 дней","streak",7,7000,200),
+                ("Level 5","Достигни 5 уровня","level",5,5000,180),
+                ("Level 10","Достигни 10 уровня","level",10,15000,350)
+            ]
+
+            for i,q in enumerate(qs,1):
+                db.add(Quest(
+                    id=i,
+                    title=q[0],
+                    description=q[1],
+                    kind=q[2],
+                    target=q[3],
+                    reward=q[4],
+                    xp=q[5]
+                ))
 async def current(db,tu):
     u=(await db.execute(select(User).where(User.telegram_id==tu["id"]))).scalar_one_or_none()
     if not u:
