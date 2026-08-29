@@ -3,7 +3,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column,BigInteger,Integer,String,Boolean,DateTime,JSON,UniqueConstraint,ForeignKey
 from datetime import datetime,timezone
 from .config import settings
-engine=create_async_engine(settings.DATABASE_URL,pool_pre_ping=True)
+engine=create_async_engine(settings.DATABASE_URL.replace("postgresql://","postgresql+asyncpg://",1).replace("postgres://","postgresql+asyncpg://",1),pool_pre_ping=True)
 Session=async_sessionmaker(engine,expire_on_commit=False,class_=AsyncSession)
 class Base(DeclarativeBase): pass
 class User(Base):
