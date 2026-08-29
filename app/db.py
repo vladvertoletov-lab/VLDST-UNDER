@@ -72,59 +72,77 @@ class Gift(Base):
     id=Column(Integer,primary_key=True); sender=Column(BigInteger); receiver=Column(BigInteger)
     inventory_id=Column(Integer); created_at=Column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc))
 async def init_db():
-    async with engine.begin() as c:
-        await c.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-        # Compatibility migration for existing PostgreSQL database.
-        # These columns existed in older versions of VLDST UNDERGROUND.
-
-        # cases.stars_price
-        await c.exec_driver_sql("""
+        await conn.exec_driver_sql("""
             ALTER TABLE cases
-            ADD COLUMN IF NOT EXISTS stars_price INTEGER DEFAULT 0
+            ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
         """)
 
-        # Old cases.description column
-        await c.exec_driver_sql("""
+        await conn.exec_driver_sql("""
             ALTER TABLE cases
-            ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''
+            ADD COLUMN IF NOT EXISTS stars_price INTEGER DEFAULT 0;
         """)
 
-        await c.exec_driver_sql("""
+        await conn.exec_driver_sql("""
+            ALTER TABLE cases
+            ADD COLUMN IF NOT EXISTS weights JSONB DEFAULT '{}'::jsonb;
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ADD COLUMN IF NOT EXISTS value BIGINT DEFAULT 0;
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ADD COLUMN IF NOT EXISTS collection VARCHAR DEFAULT '';
+        """)
+
+        await conn.exec_driver_sql("""
+            ALTER TABLE items
+            ADD COLUMN IF NOT EXISTS image VARCHAR DEFAULT '';
+        """)
+
+        await conn.exec_driver_sql("""
             UPDATE cases
             SET description = ''
-            WHERE description IS NULL
+            WHERE description IS NULL;
         """)
 
-        # Old cases.weights column
-        await c.exec_driver_sql("""
-            ALTER TABLE cases
-            ADD COLUMN IF NOT EXISTS weights JSONB DEFAULT '{}'::jsonb
+        await conn.exec_driver_sql("""
+            UPDATE cases
+            SET stars_price = 0
+            WHERE stars_price IS NULL;
         """)
 
-        await c.exec_driver_sql("""
+        await conn.exec_driver_sql("""
             UPDATE cases
             SET weights = '{}'::jsonb
-            WHERE weights IS NULL
+            WHERE weights IS NULL;
         """)
 
-        # Make old required columns safe for current seed data.
-        await c.exec_driver_sql("""
-            ALTER TABLE cases
-            ALTER COLUMN stars_price SET DEFAULT 0
+        await conn.exec_driver_sql("""
+            UPDATE items
+            SET value = 0
+            WHERE value IS NULL;
         """)
 
-        await c.exec_driver_sql("""
-            ALTER TABLE cases
-            ALTER COLUMN description SET DEFAULT ''
+        await conn.exec_driver_sql("""
+            UPDATE items
+            SET collection = ''
+            WHERE collection IS NULL;
         """)
 
-        await c.exec_driver_sql("""
-            ALTER TABLE cases
-            ALTER COLUMN weights SET DEFAULT '{}'::jsonb
+        await conn.exec_driver_sql("""
+            UPDATE items
+            SET image = ''
+            WHERE image IS NULL;
         """)
 
 
 async def get_db():
     async with Session() as s:
         yield s
+
