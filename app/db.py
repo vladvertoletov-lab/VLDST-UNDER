@@ -75,7 +75,10 @@ async def init_db():
     async with engine.begin() as c:
         await c.run_sync(Base.metadata.create_all)
 
-        # Автоматическая миграция старых таблиц
+        # Migration for existing Render PostgreSQL database.
+        # Old versions of the project may contain columns that
+        # are not used by the current SQLAlchemy models.
+
         await c.exec_driver_sql("""
             ALTER TABLE cases
             ADD COLUMN IF NOT EXISTS stars_price INTEGER DEFAULT 0
@@ -83,8 +86,37 @@ async def init_db():
 
         await c.exec_driver_sql("""
             ALTER TABLE cases
+            ADD COLUMN IF NOT EXISTS description TEXT
+        """)
+
+        # Existing rows may have NULL description.
+        # Give them a safe default before applying NOT NULL.
+        await c.exec_driver_sql("""
+            UPDATE cases
+            SET description = ''
+            WHERE description IS NULL
+        """)
+
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ALTER COLUMN description SET DEFAULT ''
+        """)
+
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
+            ALTER COLUMN description SET NOT NULL
+        """)
+
+        await c.exec_driver_sql("""
+            ALTER TABLE cases
             ALTER COLUMN stars_price SET DEFAULT 0
         """)
+
+
+async def get_db():
+    async with Session() as s:
+        yield s
+
 
 
 async def get_db():
